@@ -30,6 +30,8 @@ namespace Diplomacy.Patches
 
         private static bool ConsiderWarPrefix(Clan clan, Kingdom kingdom, IFaction otherFaction, ref bool __result)
         {
+            return false;
+
             if (otherFaction is Kingdom otherKingdom
                 && !DeclareWarConditions.Instance.CanApply(kingdom, otherKingdom, bypassCosts: true))
             {
@@ -43,6 +45,7 @@ namespace Diplomacy.Patches
         private static bool ConsiderPeacePrefix(Clan clan, Clan otherClan, IFaction otherFaction, out MakePeaceKingdomDecision? decision, ref bool __result)
         {
             decision = null;
+            return false;
 
             if (otherFaction is Kingdom otherKingdom
                 && !MakePeaceConditions.Instance.CanApply(clan.Kingdom, otherKingdom, bypassCosts: true))
