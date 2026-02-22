@@ -1,10 +1,17 @@
-﻿using System;
+﻿using Diplomacy.Models;
+
+using Newtonsoft.Json;
+
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.Library;
 
 namespace Diplomacy.CampaignBehaviors
 {
@@ -37,6 +44,7 @@ namespace Diplomacy.CampaignBehaviors
 
                 float reward = this.CalculateReward(ourselfKingdom);
                 IEnumerable<IFaction> kingdoms = clan.Kingdom.FactionsAtWarWith;
+                IEnumerable<Settlement> settlements = Settlement.All.Where(s => s.IsTown || s.IsCastle);
                 return;
             }
             return;
@@ -69,5 +77,55 @@ namespace Diplomacy.CampaignBehaviors
         {
             return;
         }
+
+        [CommandLineFunctionality.CommandLineArgumentFunction("export_settlements", "diplomacy")]
+        public static string ManualExportSettlements(List<string> args)
+        {
+            // 1. Check if the user provided a path
+            if (args == null || args.Count == 0)
+            {
+                return "Error: You must provide an absolute path. Usage: versailles.export_settlements \"C:\\path\\to\\file.json\"";
+            }
+
+            // 2. Join args in case the path has spaces and isn't quoted
+            string fullPath = string.Join(" ", args).Replace("\"", "");
+
+            try
+            {
+                // 3. Ensure the directory exists
+                string directory = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // 4. Gather Data
+                var exportList = Settlement.All
+                    .Where(s => s.IsTown || s.IsCastle)
+                    .Select(s => new SettlementExportData
+                    {
+                        Id = s.StringId,
+                        Name = s.Name.ToString(),
+                        Type = s.IsTown ? "Town" : "Castle",
+                        OwnerKingdom = s.OwnerClan?.Kingdom?.Name.ToString() ?? "Neutral",
+                        Prosperity = s.Town?.Prosperity ?? 0f,
+                        Food = s.Town?.FoodStocks ?? 0f,
+                        GarrisonSize = s.Town?.GarrisonParty?.MemberRoster.TotalManCount ?? 0,
+                        PosX = s.GetPosition().x,
+                        PosY = s.GetPosition().y
+                    }).ToList();
+
+                // 5. Serialize and Write
+                string json = JsonConvert.SerializeObject(exportList, Formatting.Indented);
+                File.WriteAllText(fullPath, json);
+
+                return $"Success! Exported {exportList.Count} settlements to: {fullPath}";
+            }
+            catch (Exception ex)
+            {
+                return $"Internal Error: {ex.Message}";
+            }
+        }
+
     }
 }
